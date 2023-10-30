@@ -7,6 +7,9 @@ ePaper is a module https://github.com/waveshareteam/Pico_ePaper_Code/blob/main/p
 
 After writing to the temporary file, gc is executed. If not executed, it will fail due to lack of memory.
 
+idat_temp" is the name of a temporary file to write the image data in the PNG.
+When the size of a PNG file is large, it is written to a temporary file to avoid running out of memory.
+
 The image is in PNG format, saved in index color with 7 colors. 600x448 size.
 
 ```python
@@ -26,13 +29,15 @@ color_map = [
 ]
 
 print(png_file)
-
 tmpfile = 'png.tmp'
+
 png = Png(png_file)
 with open(tmpfile, 'wb') as output:
-    png.convertAndWrite(output, color_map)
+    png.convertAndWrite(output, color_map, "idat_temp")
 
-width, height = png.readDimensions()
+#width, height = png.readDimensions()
+width = 600
+height = 448
 
 import gc
 gc.collect()

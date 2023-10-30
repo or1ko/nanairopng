@@ -42,7 +42,7 @@ class Png:
             inner_color_map[i] = color
         return inner_color_map
 
-    def convertAndWrite(self, output, color_map):
+    def convertAndWrite(self, output, color_map, idat_temp_file):
         with open(self.png_file, 'rb') as file:
             # skip magic_number + ihdr
             file.read(16)
@@ -67,48 +67,47 @@ class Png:
             #    "filter type", filter_type,
             #    "interrace type", interrace_type)
 
-            idat_data = bytes()
+            with open(idat_temp_file, 'wb') as idat:
+                while(True):
+                    chunk_length = file.read(4)
+                    if not chunk_length :
+                        break 
+                    chunk_length = int.from_bytes(chunk_length, 'big')
+                    chunk_name = file.read(4).decode()
 
-            while(True):
-                chunk_length = file.read(4)
-                if not chunk_length :
-                    break 
-                chunk_length = int.from_bytes(chunk_length, 'big')
-                chunk_name = file.read(4).decode()
-
-                if (chunk_name == "PLTE"):
-                    chunk_data = file.read(chunk_length)
-                    palette = self.color_palette(chunk_data, color_map)
-                    # skip crc
-                    file.read(4)
-                elif (chunk_name == "IDAT"):
-                    # print("IDAT length:", chunk_length)
-                    idat_data = idat_data + file.read(chunk_length)
-                    #skip crc
-                    file.read(4)
-                else :
-                    #skip chunk data and crc
-                    file.read(chunk_length)
-                    file.read(4)
+                    if (chunk_name == "PLTE"):
+                        chunk_data = file.read(chunk_length)
+                        palette = self.color_palette(chunk_data, color_map)
+                        # skip crc
+                        file.read(4)
+                    elif (chunk_name == "IDAT"):
+                        # print("IDAT length:", chunk_length)
+                        idat.write(file.read(chunk_length))
+                        #skip crc
+                        file.read(4)
+                    else :
+                        #skip chunk data and crc
+                        file.read(chunk_length)
+                        file.read(4)
 
             import deflate
-            import io
-            with deflate.DeflateIO(io.BytesIO(idat_data), deflate.ZLIB) as d:
-                rowBitSize = width * color_depth + 8
-                rowByteSize = int(rowBitSize / 8)
+            with open(idat_temp_file, 'rb') as idat:
+                with deflate.DeflateIO(idat, deflate.ZLIB) as d:
+                    rowBitSize = width * color_depth + 8
+                    rowByteSize = int(rowBitSize / 8)
 
-                #print("rowByteSize", rowByteSize)
+                    #print("rowByteSize", rowByteSize)
 
-                y = 0
-                while(True):
-                    row = d.read(rowByteSize)
-                    if not row:
-                        break
-                    #if (y % 100 == 0):
-                    #    print(y)
-                    y = y + 1
-                    for w in range(1, rowByteSize):
-                        u = row[w] & 0b11110000 >> 4
-                        l = row[w] & 0b00001111
-                        output.write(bytes([palette[u]]))
-                        output.write(bytes([palette[l]]))
+                    y = 0
+                    while(True):
+                        row = d.read(rowByteSize)
+                        if not row:
+                            break
+                        if (y % 100 == 0):
+                            print(y)
+                        y = y + 1
+                        for w in range(1, rowByteSize):
+                            u = row[w] & 0b11110000 >> 4
+                            l = row[w] & 0b00001111
+                            output.write(bytes([palette[u]]))
+                            output.write(bytes([palette[l]]))

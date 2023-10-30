@@ -13,6 +13,9 @@ https://github.com/waveshareteam/Pico_ePaper_Code/blob/main/python/Pico-ePaper-5
 一時ファイルに書き出し後に、gcを実行する。
 実行しないとメモリ不足で失敗する
 
+"idat_temp"は、PNG内の画像データを書き出す一時ファイル名。
+サイズが大きいPNGファイルの場合に、メモリ不足になるため、一時ファイルに書き出す。
+
 画像は、7色でインデックスカラーで保存されたPNG形式の画像。
 600x448サイズ。
 
@@ -33,13 +36,15 @@ color_map = [
 ]
 
 print(png_file)
-
 tmpfile = 'png.tmp'
+
 png = Png(png_file)
 with open(tmpfile, 'wb') as output:
-    png.convertAndWrite(output, color_map)
+    png.convertAndWrite(output, color_map, "idat_temp")
 
-width, height = png.readDimensions()
+#width, height = png.readDimensions()
+width = 600
+height = 448
 
 import gc
 gc.collect()
